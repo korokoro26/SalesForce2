@@ -84,7 +84,7 @@
     }
     .view.active { display: flex; }
 
-    /* 検索エリア（モバイル最適化） */
+    /* 検索エリア */
     .search-panel {
       padding: 0.75rem;
       background: #ffffff;
@@ -97,7 +97,7 @@
       z-index: 50;
     }
     .input-wrapper { position: relative; width: 100%; }
-    input[type="text"] {
+    input[type="text"], input[type="tel"] {
       width: 100%;
       padding: 0.65rem 0.8rem;
       border: 1.5px solid var(--border);
@@ -107,7 +107,7 @@
       background: #f8fafc;
       transition: border-color 0.15s, background 0.15s;
     }
-    input[type="text"]:focus {
+    input[type="text"]:focus, input[type="tel"]:focus {
       background: #ffffff;
       border-color: var(--primary);
     }
@@ -278,6 +278,31 @@
       gap: 0.35rem;
     }
 
+    /* 営業先リストバー */
+    .saved-header-bar {
+      padding: 0.65rem 0.85rem;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-new-custom {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
     /* 営業リスト用カード */
     .saved-card {
       background: #fff;
@@ -325,7 +350,7 @@
       font-size: 0.75rem;
     }
 
-    /* 下部タブバー (Bottom Navigation) */
+    /* 下部タブバー */
     nav.bottom-nav {
       height: calc(58px + var(--safe-bottom));
       padding-bottom: var(--safe-bottom);
@@ -368,7 +393,95 @@
       display: none;
     }
 
-    /* ポップアップ微調整 */
+    /* 新規法人追加モーダル */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 2000;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      backdrop-filter: blur(2px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-content {
+      background: #ffffff;
+      width: 100%;
+      max-width: 500px;
+      border-radius: 16px 16px 0 0;
+      padding: 1.1rem 1rem calc(1.1rem + var(--safe-bottom));
+      max-height: 90vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+      animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title { font-size: 0.95rem; font-weight: 700; }
+    .btn-close-modal {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .form-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    .form-row {
+      display: flex;
+      gap: 0.4rem;
+    }
+    .btn-geo-fetch {
+      background: #f1f5f9;
+      border: 1.5px solid var(--border);
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 0.78rem;
+      padding: 0 0.7rem;
+      border-radius: 8px;
+      white-space: nowrap;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      flex-shrink: 0;
+    }
+    .btn-geo-fetch:active { background: #e2e8f0; }
+    .modal-submit-btn {
+      margin-top: 0.4rem;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .modal-submit-btn:active { background: var(--primary-hover); }
+
+    /* ポップアップ */
     .leaflet-popup-content-wrapper {
       border-radius: 10px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.12);
@@ -420,8 +533,9 @@
 
     <!-- 3. 保存リストビュー -->
     <section id="savedView" class="view">
-      <div style="padding:0.75rem 0.85rem; background:#fff; border-bottom:1px solid var(--border); font-size:0.85rem; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
+      <div class="saved-header-bar">
         <span>営業先リスト (<span id="savedCountTitle">0</span>件)</span>
+        <button class="btn-new-custom" id="openAddModalBtn">＋ 新規追加</button>
       </div>
       <div class="list-scroll" id="savedList"></div>
     </section>
@@ -444,6 +558,65 @@
     </button>
   </nav>
 
+  <!-- 地図にない法人の手動追加モーダル -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">営業先の新規手動追加</div>
+        <button class="btn-close-modal" id="closeAddModalBtn">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">法人・事業者名 <span style="color:#ef4444;">*</span></label>
+        <input type="text" id="manualName" placeholder="例: 有限会社○○製作所">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">住所 (位置情報から自動入力可能)</label>
+        <div class="form-row">
+          <input type="text" id="manualAddress" placeholder="住所を取得または入力">
+          <button type="button" class="btn-geo-fetch" id="fetchCurrentAddrBtn">📍 現在地から取得</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">業種・カテゴリ</label>
+          <select id="manualCategory" class="status-select" style="width:100%; height:40px;">
+            <option value="法人・事業者">法人・事業者</option>
+            <option value="一般サービス業">一般サービス業</option>
+            <option value="小売・物販">小売・物販</option>
+            <option value="医療・クリニック">医療・クリニック</option>
+            <option value="宿泊・ホテル">宿泊・ホテル</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">営業ステータス</label>
+          <select id="manualStatus" class="status-select" style="width:100%; height:40px;">
+            <option value="未接触">未接触</option>
+            <option value="アプローチ中">アプローチ中</option>
+            <option value="アポ獲得">アポ獲得</option>
+            <option value="成約">成約</option>
+            <option value="対象外">対象外</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">電話番号</label>
+        <input type="tel" id="manualPhone" placeholder="例: 0265-XX-XXXX">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">メモ (担当者名・現場状況など)</label>
+        <input type="text" id="manualMemo" placeholder="例: 社長在席。名刺交換済み">
+      </div>
+
+      <button class="modal-submit-btn" id="saveManualBtn">営業先リストに追加</button>
+    </div>
+  </div>
+
   <script>
     const API_BASE = 'https://api.openpoiapi.com';
     let map, markersLayer, searchPinLayer;
@@ -463,7 +636,7 @@
 
     function formatCategoryJa(rawCat) {
       if (!rawCat) return '法人・事業者';
-      return CATEGORY_MAP_JA[rawCat] || '法人・事業者';
+      return CATEGORY_MAP_JA[rawCat] || rawCat;
     }
 
     function isExcludedTarget(item) {
@@ -491,6 +664,7 @@
       initMap();
       setupTabs();
       setupEvents();
+      setupModal();
       renderSavedList();
       updateBadge();
     });
@@ -550,6 +724,115 @@
       });
 
       document.getElementById('exportCsvBtn').addEventListener('click', exportToCsv);
+    }
+
+    /* 手動追加モーダルと位置情報取得 */
+    function setupModal() {
+      const modal = document.getElementById('addModal');
+      const openBtn = document.getElementById('openAddModalBtn');
+      const closeBtn = document.getElementById('closeAddModalBtn');
+      const fetchAddrBtn = document.getElementById('fetchCurrentAddrBtn');
+      const saveBtn = document.getElementById('saveManualBtn');
+
+      openBtn.addEventListener('click', () => {
+        modal.classList.add('open');
+      });
+
+      const closeModal = () => {
+        modal.classList.remove('open');
+        document.getElementById('manualName').value = '';
+        document.getElementById('manualAddress').value = '';
+        document.getElementById('manualPhone').value = '';
+        document.getElementById('manualMemo').value = '';
+        document.getElementById('manualStatus').value = '未接触';
+      };
+
+      closeBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      // 現在地を取得して逆ジオコーディングで住所に自動変換
+      fetchAddrBtn.addEventListener('click', async () => {
+        if (!navigator.geolocation) {
+          alert('お使いの端末で位置情報がサポートされていません。');
+          return;
+        }
+
+        const originalText = fetchAddrBtn.innerHTML;
+        fetchAddrBtn.innerHTML = '⏳ 取得中...';
+        fetchAddrBtn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            try {
+              // OpenStreetMap Nominatim 逆ジオコーディング
+              const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=ja`;
+              const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+              if (!res.ok) throw new Error();
+              const data = await res.json();
+              
+              const addr = data.address || {};
+              // 日本の住所形式に合わせて組み立て
+              const pref = addr.province || addr.prefecture || '';
+              const city = addr.city || addr.ward || addr.town || addr.village || addr.county || '';
+              const sub = addr.suburb || addr.quarter || addr.neighbourhood || '';
+              const road = addr.road || addr.quarter || '';
+              const houseNumber = addr.house_number || '';
+
+              let fullFormattedAddr = `${pref}${city}${sub}${road}${houseNumber}`.trim();
+              if (!fullFormattedAddr) {
+                fullFormattedAddr = data.display_name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+              }
+
+              document.getElementById('manualAddress').value = fullFormattedAddr;
+            } catch (_) {
+              // 失敗時は緯度経度をフォールバック設定
+              document.getElementById('manualAddress').value = `緯度:${latitude.toFixed(5)}, 経度:${longitude.toFixed(5)}`;
+            } finally {
+              fetchAddrBtn.innerHTML = originalText;
+              fetchAddrBtn.disabled = false;
+            }
+          },
+          (err) => {
+            alert('位置情報の取得に失敗しました。位置情報の利用許可を確認してください。');
+            fetchAddrBtn.innerHTML = originalText;
+            fetchAddrBtn.disabled = false;
+          },
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      });
+
+      // 保存処理
+      saveBtn.addEventListener('click', () => {
+        const name = document.getElementById('manualName').value.trim();
+        const address = document.getElementById('manualAddress').value.trim();
+        const category = document.getElementById('manualCategory').value;
+        const status = document.getElementById('manualStatus').value;
+        const phone = document.getElementById('manualPhone').value.trim();
+        const memo = document.getElementById('manualMemo').value.trim();
+
+        if (!name) {
+          alert('法人・事業者名を入力してください。');
+          return;
+        }
+
+        const newTarget = {
+          name,
+          address: address || '住所未登録',
+          category,
+          phone,
+          memo,
+          status
+        };
+
+        savedList.unshift(newTarget);
+        localStorage.setItem('sales_target_list', JSON.stringify(savedList));
+        renderSavedList();
+        updateBadge();
+        closeModal();
+      });
     }
 
     async function fetchSuggest(q) {
@@ -788,7 +1071,7 @@
         card.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">${item.name}</div>
-            <span style="font-size:0.7rem; color:#2563eb;">${item.category}</span>
+            <span style="font-size:0.7rem; color:#2563eb; font-weight:600;">${item.category}</span>
           </div>
           <div style="font-size:0.78rem; color:#64748b;">📍 ${item.address}</div>
           
