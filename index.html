@@ -3,23 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>SalesForce - 近隣法人営業支援</title>
+  <title>SalesForce - 法人営業支援</title>
   
   <!-- Leaflet.js (地図) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Driver.js (プロダクトツアー) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.bnd.iife.js"></script>
 
   <style>
     :root {
       --primary: #2563eb;
       --primary-hover: #1d4ed8;
       --primary-bg: #eff6ff;
-      --bg: #f1f5f9;
+      --bg: #f8fafc;
       --card-bg: #ffffff;
       --border: #e2e8f0;
       --text: #0f172a;
       --text-muted: #64748b;
-      --highlight: #f97316;
+      --danger: #ef4444;
+      --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     * { 
@@ -39,28 +44,77 @@
       overflow: hidden; 
     }
 
-    /* 上部コンパクトヘッダー */
+    /* ヘッダー */
     header {
       background: #ffffff;
       border-bottom: 1px solid var(--border);
-      padding: 0.6rem 0.85rem;
+      padding-top: max(0.6rem, var(--safe-top));
+      padding-left: 0.85rem;
+      padding-right: 0.85rem;
+      padding-bottom: 0.6rem;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      gap: 0.5rem;
       flex-shrink: 0;
       z-index: 100;
     }
-    .brand { font-size: 0.95rem; font-weight: 700; color: var(--primary); }
-    .header-actions { display: flex; align-items: center; gap: 0.5rem; }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .brand-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -0.01em;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
     .btn-header {
-      background: #f8fafc;
+      background: #ffffff;
       border: 1px solid var(--border);
       font-size: 0.75rem;
-      padding: 0.35rem 0.6rem;
+      padding: 0.4rem 0.65rem;
       border-radius: 6px;
       font-weight: 600;
       color: #334155;
       cursor: pointer;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-header:active { background: #f1f5f9; }
+
+    .header-bottom {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+    }
+    .store-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .select-store {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #f8fafc;
+      color: var(--text);
+      outline: none;
+      height: 34px;
     }
 
     /* ビュー切り替えコンテナ */
@@ -68,7 +122,6 @@
       flex: 1;
       position: relative;
       overflow: hidden;
-      height: calc(100dvh - 50px - 58px - var(--safe-bottom));
     }
     .view {
       position: absolute;
@@ -84,9 +137,9 @@
     }
     .view.active { display: flex; }
 
-    /* 検索エリア */
+    /* 検索パネル */
     .search-panel {
-      padding: 0.75rem;
+      padding: 0.75rem 0.85rem;
       background: #ffffff;
       border-bottom: 1px solid var(--border);
       display: flex;
@@ -99,10 +152,11 @@
     .input-wrapper { position: relative; width: 100%; }
     input[type="text"], input[type="tel"] {
       width: 100%;
-      padding: 0.65rem 0.8rem;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.95rem;
+      height: 38px;
+      padding: 0 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.88rem;
       outline: none;
       background: #f8fafc;
       transition: border-color 0.15s, background 0.15s;
@@ -118,17 +172,17 @@
       right: 0;
       background: #fff;
       border: 1px solid var(--border);
-      border-radius: 0 0 8px 8px;
+      border-radius: 0 0 6px 6px;
       max-height: 220px;
       overflow-y: auto;
       z-index: 1000;
       display: none;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
     }
     .autocomplete-item {
       padding: 0.65rem 0.8rem;
       cursor: pointer;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       border-bottom: 1px solid #f1f5f9;
     }
     .autocomplete-item:active { background: #f1f5f9; }
@@ -139,33 +193,31 @@
     }
     .btn-search {
       flex: 1;
+      height: 36px;
       background: var(--primary);
       color: #fff;
       border: none;
-      padding: 0.65rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
     }
     .btn-nearby {
-      background: #eff6ff;
-      color: var(--primary);
-      border: 1.5px solid #bfdbfe;
-      padding: 0.65rem 0.9rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
+      height: 36px;
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid var(--border);
+      padding: 0 0.9rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
       font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.2rem;
       cursor: pointer;
     }
-    .btn-search:active, .btn-nearby:active { opacity: 0.8; }
+    .btn-search:active, .btn-nearby:active { opacity: 0.85; }
 
     .status-bar {
-      padding: 0.4rem 0.85rem;
-      font-size: 0.78rem;
+      padding: 0.45rem 0.85rem;
+      font-size: 0.75rem;
       color: var(--text-muted);
       background: #fff;
       border-bottom: 1px solid var(--border);
@@ -173,38 +225,37 @@
       justify-content: space-between;
     }
 
-    /* カード一覧 */
+    /* 一覧・カード */
     .list-scroll {
       flex: 1;
-      padding: 0.65rem;
+      padding: 0.75rem;
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
+      gap: 0.65rem;
     }
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 8px;
       padding: 0.75rem 0.85rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
       display: flex;
       flex-direction: column;
-      gap: 0.4rem;
+      gap: 0.45rem;
     }
     .card-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 0.4rem;
+      gap: 0.5rem;
     }
     .card-title {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 700;
       color: var(--text);
-      line-height: 1.3;
+      line-height: 1.35;
     }
     .card-cat {
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       padding: 0.15rem 0.4rem;
       border-radius: 4px;
       background: var(--primary-bg);
@@ -214,7 +265,7 @@
       font-weight: 600;
     }
     .card-address {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--text-muted);
       line-height: 1.35;
     }
@@ -222,22 +273,24 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 0.25rem;
-      padding-top: 0.4rem;
+      margin-top: 0.2rem;
+      padding-top: 0.45rem;
       border-top: 1px solid #f1f5f9;
     }
     .quick-chips { display: flex; gap: 0.4rem; }
     .action-chip {
       display: inline-flex;
       align-items: center;
-      font-size: 0.75rem;
-      padding: 0.35rem 0.6rem;
-      border-radius: 6px;
+      justify-content: center;
+      height: 28px;
+      font-size: 0.72rem;
+      padding: 0 0.55rem;
+      border-radius: 5px;
       border: 1px solid var(--border);
       background: #f8fafc;
       color: #334155;
       text-decoration: none;
-      font-weight: 500;
+      font-weight: 600;
     }
     .action-chip:active { background: #e2e8f0; }
 
@@ -245,9 +298,10 @@
       background: var(--primary);
       color: #fff;
       border: none;
-      padding: 0.35rem 0.75rem;
-      border-radius: 6px;
-      font-size: 0.78rem;
+      height: 28px;
+      padding: 0 0.75rem;
+      border-radius: 5px;
+      font-size: 0.72rem;
       font-weight: 600;
       cursor: pointer;
     }
@@ -267,15 +321,12 @@
       background: #ffffff;
       color: var(--text);
       border: 1px solid var(--border);
-      border-radius: 50px;
-      padding: 0.65rem 1rem;
-      font-size: 0.82rem;
+      border-radius: 30px;
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
       font-weight: 600;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
     }
 
     /* 営業先リストバー */
@@ -283,76 +334,124 @@
       padding: 0.65rem 0.85rem;
       background: #fff;
       border-bottom: 1px solid var(--border);
-      font-size: 0.85rem;
-      font-weight: 700;
       display: flex;
       justify-content: space-between;
       align-items: center;
+    }
+    .saved-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
     }
     .btn-new-custom {
       background: var(--primary);
       color: #fff;
       border: none;
-      padding: 0.35rem 0.65rem;
+      height: 30px;
+      padding: 0 0.7rem;
       border-radius: 6px;
       font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 0.25rem;
+      justify-content: center;
     }
 
-    /* 営業リスト用カード */
+    /* 営業リスト用カード（整列レイアウト） */
     .saved-card {
       background: #fff;
       border: 1px solid var(--border);
       border-left: 4px solid var(--primary);
       border-radius: 8px;
-      padding: 0.75rem;
+      padding: 0.8rem;
       display: flex;
       flex-direction: column;
-      gap: 0.45rem;
+      gap: 0.55rem;
     }
-    .saved-inputs {
+    .saved-card-header {
       display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
       gap: 0.4rem;
     }
-    .saved-inputs input {
-      font-size: 0.8rem;
-      padding: 0.45rem 0.55rem;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      width: 100%;
-      background: #fff;
+    .saved-card-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.35;
     }
-    .saved-bottom {
+    .saved-card-cat {
+      font-size: 0.65rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: var(--primary-bg);
+      color: var(--primary);
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .saved-card-address {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+    .saved-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+    }
+    .saved-form-grid input {
+      height: 32px;
+      font-size: 0.78rem;
+      padding: 0 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: #f8fafc;
+      width: 100%;
+    }
+    .saved-form-grid input:focus {
+      background: #fff;
+      border-color: var(--primary);
+    }
+    .saved-card-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 0.2rem;
+      padding-top: 0.45rem;
+      border-top: 1px solid #f1f5f9;
+      gap: 0.4rem;
     }
     .status-select {
-      font-size: 0.8rem;
-      padding: 0.35rem 0.5rem;
-      border-radius: 6px;
+      height: 30px;
+      font-size: 0.75rem;
+      padding: 0 0.5rem;
+      border-radius: 5px;
       border: 1px solid var(--border);
-      background: #fff;
+      background: #f8fafc;
       font-weight: 600;
       color: #334155;
+      outline: none;
     }
     .btn-del {
       background: transparent;
       border: 1px solid var(--border);
-      color: #94a3b8;
-      border-radius: 6px;
-      padding: 0.3rem 0.6rem;
-      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-radius: 5px;
+      height: 28px;
+      padding: 0 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-del:active {
+      color: var(--danger);
+      border-color: var(--danger);
     }
 
-    /* 下部タブバー */
+    /* 下部タブバー (SVGアイコン対応) */
     nav.bottom-nav {
-      height: calc(58px + var(--safe-bottom));
+      height: calc(54px + var(--safe-bottom));
       padding-bottom: var(--safe-bottom);
       background: #ffffff;
       border-top: 1px solid var(--border);
@@ -369,35 +468,49 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 0.2rem;
+      gap: 3px;
       background: transparent;
       border: none;
       color: #64748b;
-      font-size: 0.7rem;
-      font-weight: 600;
       cursor: pointer;
       position: relative;
     }
-    .nav-item .icon { font-size: 1.25rem; line-height: 1; }
-    .nav-item.active { color: var(--primary); }
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+    .nav-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+    .nav-item.active {
+      color: var(--primary);
+    }
     .nav-badge {
       position: absolute;
-      top: 6px;
+      top: 5px;
       right: calc(50% - 18px);
-      background: #ef4444;
+      background: var(--danger);
       color: #fff;
-      font-size: 0.65rem;
+      font-size: 0.6rem;
       padding: 0.1rem 0.35rem;
       border-radius: 10px;
       font-weight: 700;
+      line-height: 1;
       display: none;
     }
 
-    /* 新規法人追加モーダル */
+    /* モーダル */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.55);
+      background: rgba(15, 23, 42, 0.45);
       z-index: 2000;
       display: none;
       align-items: flex-end;
@@ -409,14 +522,13 @@
       background: #ffffff;
       width: 100%;
       max-width: 500px;
-      border-radius: 16px 16px 0 0;
+      border-radius: 14px 14px 0 0;
       padding: 1.1rem 1rem calc(1.1rem + var(--safe-bottom));
-      max-height: 90vh;
+      max-height: 85vh;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 0.8rem;
-      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+      gap: 0.75rem;
       animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
     @keyframes slideUp {
@@ -427,16 +539,17 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 0.4rem;
+      padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--border);
     }
     .modal-title { font-size: 0.95rem; font-weight: 700; }
     .btn-close-modal {
       background: none;
       border: none;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       color: var(--text-muted);
       cursor: pointer;
+      line-height: 1;
     }
     .form-group {
       display: flex;
@@ -444,74 +557,78 @@
       gap: 0.3rem;
     }
     .form-label {
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       font-weight: 600;
       color: #334155;
     }
-    .form-row {
-      display: flex;
-      gap: 0.4rem;
-    }
+    .form-row { display: flex; gap: 0.45rem; }
     .btn-geo-fetch {
       background: #f1f5f9;
-      border: 1.5px solid var(--border);
-      color: var(--primary);
+      border: 1px solid var(--border);
+      color: var(--text);
       font-weight: 600;
-      font-size: 0.78rem;
-      padding: 0 0.7rem;
-      border-radius: 8px;
+      font-size: 0.75rem;
+      padding: 0 0.65rem;
+      border-radius: 6px;
       white-space: nowrap;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.2rem;
-      flex-shrink: 0;
+      height: 38px;
     }
-    .btn-geo-fetch:active { background: #e2e8f0; }
     .modal-submit-btn {
       margin-top: 0.4rem;
       background: var(--primary);
       color: #fff;
       border: none;
-      padding: 0.75rem;
-      border-radius: 8px;
-      font-size: 0.9rem;
+      height: 42px;
+      border-radius: 6px;
+      font-size: 0.88rem;
       font-weight: 700;
       cursor: pointer;
     }
-    .modal-submit-btn:active { background: var(--primary-hover); }
 
-    /* ポップアップ */
-    .leaflet-popup-content-wrapper {
-      border-radius: 10px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    }
-    .leaflet-popup-content {
-      margin: 0.75rem 0.85rem;
-      font-size: 0.85rem;
+    /* 店舗管理モーダル */
+    .store-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 0.4rem;
+      font-size: 0.82rem;
+      background: #f8fafc;
     }
   </style>
 </head>
 <body>
 
+  <!-- ヘッダー（2段構成・セーフエリア対応） -->
   <header>
-    <div class="brand">🏢 SalesForce モバイル</div>
-    <div class="header-actions">
-      <button class="btn-header" id="exportCsvBtn">📥 CSV保存</button>
+    <div class="header-top">
+      <div class="brand-title">SalesForce</div>
+      <div class="header-actions">
+        <button class="btn-header" id="startTourBtn">ガイド</button>
+        <button class="btn-header" id="exportCsvBtn">CSV出力</button>
+      </div>
+    </div>
+    <div class="header-bottom" id="tourStoreSelector">
+      <span class="store-label">担当店</span>
+      <select id="currentStoreSelect" class="select-store"></select>
+      <button class="btn-header" id="manageStoreBtn">店舗管理</button>
     </div>
   </header>
 
   <div class="view-container">
-    <!-- 1. 周辺探索ビュー (リスト) -->
+    <!-- 1. 周辺探索ビュー -->
     <section id="listView" class="view active">
-      <div class="search-panel">
+      <div class="search-panel" id="tourSearchPanel">
         <div class="input-wrapper">
           <input type="text" id="searchInput" placeholder="駅名・地名（例: 飯田駅、恵比寿）" autocomplete="off" enterkeyhint="search">
           <div id="autocompleteList" class="autocomplete-list"></div>
         </div>
         <div class="search-buttons">
           <button id="searchBtn" class="btn-search">周辺を検索</button>
-          <button id="nearbyBtn" class="btn-nearby">📍 現在地</button>
+          <button id="nearbyBtn" class="btn-nearby">現在地周辺</button>
         </div>
       </div>
       <div class="status-bar">
@@ -519,8 +636,8 @@
         <span id="statusTarget">未設定</span>
       </div>
       <div class="list-scroll" id="resultList">
-        <div style="text-align:center; color:var(--text-muted); padding:3rem 1rem; font-size:0.85rem;">
-          駅名・地名を入力するか、「現在地」をタップして営業先を検索してください。
+        <div style="text-align:center; color:var(--text-muted); padding:3rem 1rem; font-size:0.82rem;">
+          駅名・地名を入力するか、「現在地周辺」をタップして営業先を検索してください。
         </div>
       </div>
     </section>
@@ -528,61 +645,71 @@
     <!-- 2. 地図ビュー -->
     <section id="mapView" class="view">
       <div id="map"></div>
-      <button class="map-floating-btn" id="mapNearbyBtn">📍 現在地へ</button>
+      <button class="map-floating-btn" id="mapNearbyBtn">現在地へ移動</button>
     </section>
 
     <!-- 3. 保存リストビュー -->
     <section id="savedView" class="view">
-      <div class="saved-header-bar">
-        <span>営業先リスト (<span id="savedCountTitle">0</span>件)</span>
-        <button class="btn-new-custom" id="openAddModalBtn">＋ 新規追加</button>
+      <div class="saved-header-bar" id="tourSavedHeader">
+        <span class="saved-title">営業先リスト (<span id="savedCountTitle">0</span>件)</span>
+        <button class="btn-new-custom" id="openAddModalBtn">新規手動登録</button>
       </div>
       <div class="list-scroll" id="savedList"></div>
     </section>
   </div>
 
-  <!-- ボトムナビゲーション -->
-  <nav class="bottom-nav">
+  <!-- 下部タブバー（SVGアイコン） -->
+  <nav class="bottom-nav" id="tourBottomNav">
     <button class="nav-item active" data-target="listView">
-      <span class="icon">🔍</span>
-      <span>見つける</span>
+      <svg class="nav-icon" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <span class="nav-label">見つける</span>
     </button>
     <button class="nav-item" data-target="mapView">
-      <span class="icon">🗺</span>
-      <span>マップ</span>
+      <svg class="nav-icon" viewBox="0 0 24 24">
+        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+        <line x1="8" y1="2" x2="8" y2="18"></line>
+        <line x1="16" y1="6" x2="16" y2="22"></line>
+      </svg>
+      <span class="nav-label">マップ</span>
     </button>
     <button class="nav-item" data-target="savedView">
-      <span class="icon">📋</span>
-      <span>営業先</span>
+      <svg class="nav-icon" viewBox="0 0 24 24">
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+      </svg>
+      <span class="nav-label">営業先</span>
       <span class="nav-badge" id="navBadge">0</span>
     </button>
   </nav>
 
-  <!-- 地図にない法人の手動追加モーダル -->
+  <!-- 手動追加モーダル -->
   <div class="modal-overlay" id="addModal">
     <div class="modal-content">
       <div class="modal-header">
-        <div class="modal-title">営業先の新規手動追加</div>
+        <div class="modal-title">営業先の新規登録</div>
         <button class="btn-close-modal" id="closeAddModalBtn">&times;</button>
       </div>
 
       <div class="form-group">
-        <label class="form-label">法人・事業者名 <span style="color:#ef4444;">*</span></label>
+        <label class="form-label">法人・事業者名 <span style="color:var(--danger);">*</span></label>
         <input type="text" id="manualName" placeholder="例: 有限会社○○製作所">
       </div>
 
       <div class="form-group">
-        <label class="form-label">住所 (位置情報から自動入力可能)</label>
+        <label class="form-label">住所</label>
         <div class="form-row">
-          <input type="text" id="manualAddress" placeholder="住所を取得または入力">
-          <button type="button" class="btn-geo-fetch" id="fetchCurrentAddrBtn">📍 現在地から取得</button>
+          <input type="text" id="manualAddress" placeholder="住所を入力">
+          <button type="button" class="btn-geo-fetch" id="fetchCurrentAddrBtn">現在地取得</button>
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group" style="flex:1;">
-          <label class="form-label">業種・カテゴリ</label>
-          <select id="manualCategory" class="status-select" style="width:100%; height:40px;">
+          <label class="form-label">業種</label>
+          <select id="manualCategory" class="status-select" style="width:100%; height:38px;">
             <option value="法人・事業者">法人・事業者</option>
             <option value="一般サービス業">一般サービス業</option>
             <option value="小売・物販">小売・物販</option>
@@ -592,8 +719,8 @@
           </select>
         </div>
         <div class="form-group" style="flex:1;">
-          <label class="form-label">営業ステータス</label>
-          <select id="manualStatus" class="status-select" style="width:100%; height:40px;">
+          <label class="form-label">ステータス</label>
+          <select id="manualStatus" class="status-select" style="width:100%; height:38px;">
             <option value="未接触">未接触</option>
             <option value="アプローチ中">アプローチ中</option>
             <option value="アポ獲得">アポ獲得</option>
@@ -609,11 +736,34 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">メモ (担当者名・現場状況など)</label>
-        <input type="text" id="manualMemo" placeholder="例: 社長在席。名刺交換済み">
+        <label class="form-label">メモ</label>
+        <input type="text" id="manualMemo" placeholder="例: 代表者在席。名刺交換済み">
       </div>
 
       <button class="modal-submit-btn" id="saveManualBtn">営業先リストに追加</button>
+    </div>
+  </div>
+
+  <!-- 店舗管理モーダル -->
+  <div class="modal-overlay" id="storeModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">店舗・営業先リスト管理</div>
+        <button class="btn-close-modal" id="closeStoreModalBtn">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">新規店舗（リスト）の作成</label>
+        <div class="form-row">
+          <input type="text" id="newStoreNameInput" placeholder="例: 飯田水の手店">
+          <button class="btn-header" id="createStoreBtn" style="background:var(--primary); color:#fff; border:none; height:38px; padding:0 0.9rem;">作成</button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:0.3rem;">
+        <label class="form-label">登録店舗一覧</label>
+        <div id="storeListContainer" style="max-height: 200px; overflow-y:auto;"></div>
+      </div>
     </div>
   </div>
 
@@ -621,9 +771,37 @@
     const API_BASE = 'https://api.openpoiapi.com';
     let map, markersLayer, searchPinLayer;
     let currentResults = [];
-    let savedList = JSON.parse(localStorage.getItem('sales_target_list') || '[]');
     let markerMap = new Map();
     let currentCenter = null;
+
+    /* 複数店舗リストの管理基盤 */
+    const DEFAULT_STORE_ID = 'store_default';
+    let stores = JSON.parse(localStorage.getItem('sf_store_list') || '[]');
+    if (stores.length === 0) {
+      stores = [{ id: DEFAULT_STORE_ID, name: '本社・本店' }];
+      localStorage.setItem('sf_store_list', JSON.stringify(stores));
+    }
+
+    let currentStoreId = localStorage.getItem('sf_current_store_id') || stores[0].id;
+    if (!stores.some(s => s.id === currentStoreId)) {
+      currentStoreId = stores[0].id;
+    }
+
+    function getStoreStorageKey(storeId) {
+      return `sf_targets_${storeId}`;
+    }
+
+    if (localStorage.getItem('sales_target_list') && !localStorage.getItem(getStoreStorageKey(DEFAULT_STORE_ID))) {
+      localStorage.setItem(getStoreStorageKey(DEFAULT_STORE_ID), localStorage.getItem('sales_target_list'));
+    }
+
+    function getSavedList() {
+      return JSON.parse(localStorage.getItem(getStoreStorageKey(currentStoreId)) || '[]');
+    }
+
+    function setSavedList(list) {
+      localStorage.setItem(getStoreStorageKey(currentStoreId), JSON.stringify(list));
+    }
 
     const CATEGORY_MAP_JA = {
       'retail_other': '小売・物販',
@@ -663,8 +841,10 @@
     window.addEventListener('DOMContentLoaded', () => {
       initMap();
       setupTabs();
+      setupStoreManagement();
       setupEvents();
       setupModal();
+      setupTour();
       renderSavedList();
       updateBadge();
     });
@@ -698,6 +878,93 @@
       });
     }
 
+    function setupStoreManagement() {
+      const select = document.getElementById('currentStoreSelect');
+      const storeModal = document.getElementById('storeModal');
+      const manageBtn = document.getElementById('manageStoreBtn');
+      const closeBtn = document.getElementById('closeStoreModalBtn');
+      const createBtn = document.getElementById('createStoreBtn');
+
+      function updateStoreSelect() {
+        select.innerHTML = '';
+        stores.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.name;
+          if (s.id === currentStoreId) opt.selected = true;
+          select.appendChild(opt);
+        });
+      }
+
+      function renderStoreList() {
+        const container = document.getElementById('storeListContainer');
+        container.innerHTML = '';
+        stores.forEach(s => {
+          const div = document.createElement('div');
+          div.className = 'store-list-item';
+          const count = JSON.parse(localStorage.getItem(getStoreStorageKey(s.id)) || '[]').length;
+          div.innerHTML = `
+            <span><strong>${s.name}</strong> (${count}件)</span>
+            ${stores.length > 1 ? `<button class="btn-del" onclick="deleteStore('${s.id}')">削除</button>` : ''}
+          `;
+          container.appendChild(div);
+        });
+      }
+
+      updateStoreSelect();
+
+      select.addEventListener('change', (e) => {
+        currentStoreId = e.target.value;
+        localStorage.setItem('sf_current_store_id', currentStoreId);
+        renderSavedList();
+        renderSearchResults(currentResults);
+        updateBadge();
+      });
+
+      manageBtn.addEventListener('click', () => {
+        renderStoreList();
+        storeModal.classList.add('open');
+      });
+
+      closeBtn.addEventListener('click', () => storeModal.classList.remove('open'));
+      storeModal.addEventListener('click', (e) => {
+        if (e.target === storeModal) storeModal.classList.remove('open');
+      });
+
+      createBtn.addEventListener('click', () => {
+        const input = document.getElementById('newStoreNameInput');
+        const name = input.value.trim();
+        if (!name) return;
+        const newId = 'store_' + Date.now();
+        stores.push({ id: newId, name });
+        localStorage.setItem('sf_store_list', JSON.stringify(stores));
+        input.value = '';
+        currentStoreId = newId;
+        localStorage.setItem('sf_current_store_id', currentStoreId);
+        updateStoreSelect();
+        renderStoreList();
+        renderSavedList();
+        renderSearchResults(currentResults);
+        updateBadge();
+      });
+
+      window.deleteStore = function(id) {
+        if (!confirm('この店舗と紐づく営業先リストを削除しますか？')) return;
+        stores = stores.filter(s => s.id !== id);
+        localStorage.removeItem(getStoreStorageKey(id));
+        localStorage.setItem('sf_store_list', JSON.stringify(stores));
+        if (currentStoreId === id) {
+          currentStoreId = stores[0].id;
+          localStorage.setItem('sf_current_store_id', currentStoreId);
+        }
+        updateStoreSelect();
+        renderStoreList();
+        renderSavedList();
+        renderSearchResults(currentResults);
+        updateBadge();
+      };
+    }
+
     function setupEvents() {
       document.getElementById('searchBtn').addEventListener('click', handleKeywordSearch);
       document.getElementById('nearbyBtn').addEventListener('click', searchNearby);
@@ -726,7 +993,6 @@
       document.getElementById('exportCsvBtn').addEventListener('click', exportToCsv);
     }
 
-    /* 手動追加モーダルと位置情報取得 */
     function setupModal() {
       const modal = document.getElementById('addModal');
       const openBtn = document.getElementById('openAddModalBtn');
@@ -734,9 +1000,7 @@
       const fetchAddrBtn = document.getElementById('fetchCurrentAddrBtn');
       const saveBtn = document.getElementById('saveManualBtn');
 
-      openBtn.addEventListener('click', () => {
-        modal.classList.add('open');
-      });
+      openBtn.addEventListener('click', () => modal.classList.add('open'));
 
       const closeModal = () => {
         modal.classList.remove('open');
@@ -752,59 +1016,53 @@
         if (e.target === modal) closeModal();
       });
 
-      // 現在地を取得して逆ジオコーディングで住所に自動変換
       fetchAddrBtn.addEventListener('click', async () => {
         if (!navigator.geolocation) {
-          alert('お使いの端末で位置情報がサポートされていません。');
+          alert('端末の位置情報サービスがサポートされていません。');
           return;
         }
 
-        const originalText = fetchAddrBtn.innerHTML;
-        fetchAddrBtn.innerHTML = '⏳ 取得中...';
+        const originalText = fetchAddrBtn.textContent;
+        fetchAddrBtn.textContent = '取得中...';
         fetchAddrBtn.disabled = true;
 
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
             const { latitude, longitude } = pos.coords;
             try {
-              // OpenStreetMap Nominatim 逆ジオコーディング
               const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=ja`;
               const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
               if (!res.ok) throw new Error();
               const data = await res.json();
               
               const addr = data.address || {};
-              // 日本の住所形式に合わせて組み立て
               const pref = addr.province || addr.prefecture || '';
               const city = addr.city || addr.ward || addr.town || addr.village || addr.county || '';
               const sub = addr.suburb || addr.quarter || addr.neighbourhood || '';
-              const road = addr.road || addr.quarter || '';
+              const road = addr.road || '';
               const houseNumber = addr.house_number || '';
 
               let fullFormattedAddr = `${pref}${city}${sub}${road}${houseNumber}`.trim();
               if (!fullFormattedAddr) {
                 fullFormattedAddr = data.display_name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
               }
-
               document.getElementById('manualAddress').value = fullFormattedAddr;
             } catch (_) {
-              // 失敗時は緯度経度をフォールバック設定
               document.getElementById('manualAddress').value = `緯度:${latitude.toFixed(5)}, 経度:${longitude.toFixed(5)}`;
             } finally {
-              fetchAddrBtn.innerHTML = originalText;
+              fetchAddrBtn.textContent = originalText;
               fetchAddrBtn.disabled = false;
             }
           },
-          (err) => {
-            alert('位置情報の取得に失敗しました。位置情報の利用許可を確認してください。');
-            fetchAddrBtn.innerHTML = originalText;
+          () => {
+            alert('位置情報の取得に失敗しました。');
+            fetchAddrBtn.textContent = originalText;
             fetchAddrBtn.disabled = false;
           },
           { enableHighAccuracy: true, timeout: 8000 }
         );
       });
 
-      // 保存処理
       saveBtn.addEventListener('click', () => {
         const name = document.getElementById('manualName').value.trim();
         const address = document.getElementById('manualAddress').value.trim();
@@ -818,20 +1076,73 @@
           return;
         }
 
-        const newTarget = {
+        const list = getSavedList();
+        list.unshift({
           name,
           address: address || '住所未登録',
           category,
           phone,
           memo,
           status
-        };
-
-        savedList.unshift(newTarget);
-        localStorage.setItem('sales_target_list', JSON.stringify(savedList));
+        });
+        setSavedList(list);
         renderSavedList();
         updateBadge();
         closeModal();
+      });
+    }
+
+    function setupTour() {
+      const driver = window.driver.js.driver;
+      const driverObj = driver({
+        showProgress: true,
+        animate: true,
+        allowClose: true,
+        nextBtnText: '次へ',
+        prevBtnText: '前へ',
+        doneBtnText: '完了',
+        steps: [
+          {
+            element: '#tourStoreSelector',
+            popover: {
+              title: '店舗（リスト）の切り替え',
+              description: '担当店舗ごとに営業先リストを独立して保存できます。「店舗管理」から新しい店舗を作成・管理できます。',
+              side: 'bottom',
+              align: 'start'
+            }
+          },
+          {
+            element: '#tourSearchPanel',
+            popover: {
+              title: '周辺法人の検索',
+              description: '駅名や地名を入力して検索するか、「現在地周辺」をタップすると周囲の法人が一覧化されます。',
+              side: 'bottom',
+              align: 'center'
+            }
+          },
+          {
+            element: '#tourBottomNav',
+            popover: {
+              title: '画面の切り替え',
+              description: '「見つける（検索結果）」、「マップ（地図確認）」、「営業先（保存済みリスト）」をワンタップで切り替え可能です。',
+              side: 'top',
+              align: 'center'
+            }
+          },
+          {
+            element: '#exportCsvBtn',
+            popover: {
+              title: 'CSV出力',
+              description: '選択中の店舗に登録されている営業先リストをCSV形式でダウンロードできます。',
+              side: 'bottom',
+              align: 'end'
+            }
+          }
+        ]
+      });
+
+      document.getElementById('startTourBtn').addEventListener('click', () => {
+        driverObj.drive();
       });
     }
 
@@ -910,7 +1221,7 @@
       map.setView([lat, lng], 15);
       searchPinLayer.clearLayers();
       L.circleMarker([lat, lng], {
-        radius: 7,
+        radius: 6,
         color: '#dc2626',
         fillColor: '#ef4444',
         fillOpacity: 0.95
@@ -961,7 +1272,7 @@
         const key = `${item.name}_${fullAddr}`;
 
         const marker = L.circleMarker([lat, lng], {
-          radius: 7,
+          radius: 6,
           color: '#1d4ed8',
           fillColor: '#3b82f6',
           fillOpacity: 0.85,
@@ -973,14 +1284,14 @@
 
         marker.bindPopup(`
           <div style="line-height:1.4;">
-            <strong style="font-size:0.9rem;">${item.name}</strong><br>
+            <strong style="font-size:0.85rem;">${item.name}</strong><br>
             <span style="color:#2563eb; font-size:0.7rem; font-weight:600;">[${catJa}]</span><br>
             <span style="color:#64748b; font-size:0.75rem;">${fullAddr}</span>
             <div style="display:flex; gap:0.4rem; margin:0.45rem 0;">
-              <a href="${searchUrl}" target="_blank" style="font-size:0.75rem; text-decoration:none; padding:0.25rem 0.5rem; background:#f1f5f9; border-radius:4px; color:#0284c7;">🔍 検索</a>
-              <a href="${mapNavUrl}" target="_blank" style="font-size:0.75rem; text-decoration:none; padding:0.25rem 0.5rem; background:#f1f5f9; border-radius:4px; color:#16a34a;">🧭 ナビ</a>
+              <a href="${searchUrl}" target="_blank" style="font-size:0.75rem; text-decoration:none; padding:0.25rem 0.5rem; background:#f1f5f9; border-radius:4px; color:#0284c7;">検索</a>
+              <a href="${mapNavUrl}" target="_blank" style="font-size:0.75rem; text-decoration:none; padding:0.25rem 0.5rem; background:#f1f5f9; border-radius:4px; color:#16a34a;">ナビ</a>
             </div>
-            <button onclick="toggleSaveCustomer(${idx})" style="width:100%; padding:0.4rem; font-size:0.75rem; border-radius:6px; background:#2563eb; color:#fff; border:none; font-weight:600;">リストへ追加</button>
+            <button onclick="toggleSaveCustomer(${idx})" style="width:100%; padding:0.4rem; font-size:0.75rem; border-radius:6px; background:#2563eb; color:#fff; border:none; font-weight:600; cursor:pointer;">リストへ追加</button>
           </div>
         `);
 
@@ -993,9 +1304,11 @@
       container.innerHTML = '';
 
       if (results.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:2rem; color:#94a3b8; font-size:0.85rem;">対象法人が見つかりませんでした。</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:2rem; color:#94a3b8; font-size:0.82rem;">対象法人が見つかりませんでした。</div>`;
         return;
       }
+
+      const savedList = getSavedList();
 
       results.forEach((item, idx) => {
         const fullAddr = item.address || ((item.prefecture || '') + (item.city || ''));
@@ -1011,14 +1324,14 @@
             <div class="card-title">${item.name}</div>
             <span class="card-cat">${catJa}</span>
           </div>
-          <div class="card-address">📍 ${fullAddr}</div>
+          <div class="card-address">${fullAddr}</div>
           <div class="card-actions">
             <div class="quick-chips">
-              <a class="action-chip" href="${searchUrl}" target="_blank">🔍 電話/HP</a>
-              <a class="action-chip" href="${mapNavUrl}" target="_blank">🧭 ナビ</a>
+              <a class="action-chip" href="${searchUrl}" target="_blank">電話/HP</a>
+              <a class="action-chip" href="${mapNavUrl}" target="_blank">ナビ</a>
             </div>
             <button class="btn-add ${isSaved ? 'saved' : ''}" onclick="toggleSaveCustomer(${idx})">
-              ${isSaved ? '✓ 保存済' : '＋ リスト追加'}
+              ${isSaved ? '登録済' : 'リスト追加'}
             </button>
           </div>
         `;
@@ -1031,6 +1344,7 @@
       if (!item) return;
 
       const fullAddr = item.address || ((item.prefecture || '') + (item.city || ''));
+      const savedList = getSavedList();
       const existingIdx = savedList.findIndex(s => s.name === item.name && s.address === fullAddr);
 
       if (existingIdx >= 0) {
@@ -1045,7 +1359,7 @@
           status: '未接触'
         });
       }
-      localStorage.setItem('sales_target_list', JSON.stringify(savedList));
+      setSavedList(savedList);
       renderSavedList();
       renderSearchResults(currentResults);
       updateBadge();
@@ -1054,11 +1368,12 @@
     function renderSavedList() {
       const container = document.getElementById('savedList');
       const countEl = document.getElementById('savedCountTitle');
+      const savedList = getSavedList();
       countEl.textContent = savedList.length;
       container.innerHTML = '';
 
       if (savedList.length === 0) {
-        container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:3rem 1rem; font-size:0.85rem;">保存された営業先はありません。</div>`;
+        container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:3rem 1rem; font-size:0.82rem;">保存された営業先はありません。</div>`;
         return;
       }
 
@@ -1069,30 +1384,29 @@
         const card = document.createElement('div');
         card.className = 'saved-card';
         card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">${item.name}</div>
-            <span style="font-size:0.7rem; color:#2563eb; font-weight:600;">${item.category}</span>
+          <div class="saved-card-header">
+            <div class="saved-card-name">${item.name}</div>
+            <span class="saved-card-cat">${item.category}</span>
           </div>
-          <div style="font-size:0.78rem; color:#64748b;">📍 ${item.address}</div>
+          <div class="saved-card-address">${item.address}</div>
           
-          <div style="display:flex; gap:0.4rem; margin:0.15rem 0;">
-            <a class="action-chip" href="${searchUrl}" target="_blank">🔍 電話・詳細</a>
-            <a class="action-chip" href="${mapNavUrl}" target="_blank">🧭 ナビ</a>
-          </div>
-
-          <div class="saved-inputs">
+          <div class="saved-form-grid">
             <input type="tel" placeholder="電話番号" value="${item.phone || ''}" onchange="updateCustomerField(${idx}, 'phone', this.value)">
             <input type="text" placeholder="メモ (担当者名等)" value="${item.memo || ''}" onchange="updateCustomerField(${idx}, 'memo', this.value)">
           </div>
 
-          <div class="saved-bottom">
-            <select class="status-select" onchange="updateCustomerField(${idx}, 'status', this.value)">
-              <option value="未接触" ${item.status === '未接触' ? 'selected' : ''}>未接触</option>
-              <option value="アプローチ中" ${item.status === 'アプローチ中' ? 'selected' : ''}>アプローチ中</option>
-              <option value="アポ獲得" ${item.status === 'アポ獲得' ? 'selected' : ''}>アポ獲得</option>
-              <option value="成約" ${item.status === '成約' ? 'selected' : ''}>成約</option>
-              <option value="対象外" ${item.status === '対象外' ? 'selected' : ''}>対象外</option>
-            </select>
+          <div class="saved-card-footer">
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <select class="status-select" onchange="updateCustomerField(${idx}, 'status', this.value)">
+                <option value="未接触" ${item.status === '未接触' ? 'selected' : ''}>未接触</option>
+                <option value="アプローチ中" ${item.status === 'アプローチ中' ? 'selected' : ''}>アプローチ中</option>
+                <option value="アポ獲得" ${item.status === 'アポ獲得' ? 'selected' : ''}>アポ獲得</option>
+                <option value="成約" ${item.status === '成約' ? 'selected' : ''}>成約</option>
+                <option value="対象外" ${item.status === '対象外' ? 'selected' : ''}>対象外</option>
+              </select>
+              <a class="action-chip" href="${searchUrl}" target="_blank">詳細</a>
+              <a class="action-chip" href="${mapNavUrl}" target="_blank">ナビ</a>
+            </div>
             <button class="btn-del" onclick="removeSaved(${idx})">削除</button>
           </div>
         `;
@@ -1102,6 +1416,7 @@
 
     function updateBadge() {
       const badge = document.getElementById('navBadge');
+      const savedList = getSavedList();
       if (savedList.length > 0) {
         badge.textContent = savedList.length;
         badge.style.display = 'block';
@@ -1111,27 +1426,32 @@
     }
 
     window.updateCustomerField = function(idx, field, value) {
+      const savedList = getSavedList();
       if (savedList[idx]) {
         savedList[idx][field] = value;
-        localStorage.setItem('sales_target_list', JSON.stringify(savedList));
+        setSavedList(savedList);
       }
     };
 
     window.removeSaved = function(idx) {
+      const savedList = getSavedList();
       savedList.splice(idx, 1);
-      localStorage.setItem('sales_target_list', JSON.stringify(savedList));
+      setSavedList(savedList);
       renderSavedList();
       renderSearchResults(currentResults);
       updateBadge();
     };
 
     function exportToCsv() {
+      const savedList = getSavedList();
+      const currentStore = stores.find(s => s.id === currentStoreId) || { name: '営業先' };
       if (savedList.length === 0) {
         alert('保存された営業先がありません。');
         return;
       }
-      const headers = ['施設名', '電話番号', '営業ステータス', 'メモ', '住所', '業種/カテゴリ'];
+      const headers = ['店舗名', '施設名', '電話番号', '営業ステータス', 'メモ', '住所', '業種/カテゴリ'];
       const rows = savedList.map(item => [
+        `"${currentStore.name.replace(/"/g, '""')}"`,
         `"${(item.name || '').replace(/"/g, '""')}"`,
         `"${(item.phone || '').replace(/"/g, '""')}"`,
         `"${item.status || ''}"`,
@@ -1145,7 +1465,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `sales_lead_list_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `${currentStore.name}_sales_list_${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     }
