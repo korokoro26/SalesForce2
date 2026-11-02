@@ -9,10 +9,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Driver.js (プロダクトツアー) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.bnd.iife.js"></script>
-
   <style>
     :root {
       --primary: #2563eb;
@@ -506,11 +502,11 @@
       display: none;
     }
 
-    /* モーダル */
+    /* 汎用モーダル */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.45);
+      background: rgba(15, 23, 42, 0.5);
       z-index: 2000;
       display: none;
       align-items: flex-end;
@@ -598,6 +594,126 @@
       font-size: 0.82rem;
       background: #f8fafc;
     }
+
+    /* オンボーディングモーダル専用UI */
+    #onboardingModal.modal-overlay {
+      align-items: center;
+      padding: 1rem;
+    }
+    #onboardingModal .modal-content {
+      border-radius: 16px;
+      max-height: 90vh;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      padding: 1.25rem 1.25rem calc(1.25rem + var(--safe-bottom));
+      animation: zoomIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes zoomIn {
+      from { transform: scale(0.94); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .onboard-step {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0.4rem 0.2rem 0.8rem;
+    }
+    .onboard-step.active {
+      display: flex;
+    }
+    .onboard-badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      background: var(--primary-bg);
+      color: var(--primary);
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 0.65rem;
+      letter-spacing: 0.02em;
+    }
+    .onboard-icon-box {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: #eff6ff;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.8rem;
+    }
+    .onboard-icon-box svg {
+      width: 30px;
+      height: 30px;
+      stroke-width: 2.2;
+    }
+    .onboard-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.35;
+      margin-bottom: 0.5rem;
+    }
+    .onboard-desc {
+      font-size: 0.82rem;
+      color: #475569;
+      line-height: 1.55;
+      text-align: left;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 0.85rem;
+      width: 100%;
+    }
+    .onboard-dots {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      padding: 0.2rem 0;
+    }
+    .onboard-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      transition: all 0.2s;
+    }
+    .onboard-dot.active {
+      width: 20px;
+      border-radius: 4px;
+      background: var(--primary);
+    }
+    .onboard-footer-nav {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.4rem;
+    }
+    .btn-onboard-sub {
+      flex: 1;
+      height: 40px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 600;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .btn-onboard-sub:active { background: #e2e8f0; }
+    .btn-onboard-main {
+      flex: 2;
+      height: 40px;
+      border: none;
+      background: var(--primary);
+      color: #ffffff;
+      font-weight: 700;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+    .btn-onboard-main:active { background: var(--primary-hover); }
   </style>
 </head>
 <body>
@@ -607,7 +723,7 @@
     <div class="header-top">
       <div class="brand-title">SalesForce</div>
       <div class="header-actions">
-        <button class="btn-header" id="startTourBtn">ガイド</button>
+        <button class="btn-header" id="startOnboardingBtn">ガイド</button>
         <button class="btn-header" id="exportCsvBtn">CSV出力</button>
       </div>
     </div>
@@ -621,7 +737,7 @@
   <div class="view-container">
     <!-- 1. 周辺探索ビュー -->
     <section id="listView" class="view active">
-      <div class="search-panel" id="tourSearchPanel">
+      <div class="search-panel">
         <div class="input-wrapper">
           <input type="text" id="searchInput" placeholder="駅名・地名（例: 飯田駅、恵比寿）" autocomplete="off" enterkeyhint="search">
           <div id="autocompleteList" class="autocomplete-list"></div>
@@ -650,7 +766,7 @@
 
     <!-- 3. 保存リストビュー -->
     <section id="savedView" class="view">
-      <div class="saved-header-bar" id="tourSavedHeader">
+      <div class="saved-header-bar">
         <span class="saved-title">営業先リスト (<span id="savedCountTitle">0</span>件)</span>
         <button class="btn-new-custom" id="openAddModalBtn">新規手動登録</button>
       </div>
@@ -659,7 +775,7 @@
   </div>
 
   <!-- 下部タブバー（SVGアイコン） -->
-  <nav class="bottom-nav" id="tourBottomNav">
+  <nav class="bottom-nav">
     <button class="nav-item active" data-target="listView">
       <svg class="nav-icon" viewBox="0 0 24 24">
         <circle cx="11" cy="11" r="8"></circle>
@@ -767,6 +883,96 @@
     </div>
   </div>
 
+  <!-- 新設: オンボーディングモーダル（アプリの使い方・メリットを訴求） -->
+  <div class="modal-overlay" id="onboardingModal">
+    <div class="modal-content">
+      <div class="modal-header" style="border-bottom:none; padding-bottom:0;">
+        <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted);" id="onboardStepNumber">Step 1 / 4</span>
+        <button class="btn-close-modal" id="closeOnboardingBtn">&times;</button>
+      </div>
+
+      <!-- Step 1: 営業先を即時自動スクリーニング -->
+      <div class="onboard-step active" data-step="0">
+        <span class="onboard-badge">圧倒的なリストアップ効率</span>
+        <div class="onboard-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+        <div class="onboard-title">周辺法人をワンタップ自動抽出</div>
+        <div class="onboard-desc">
+          地名入力や<strong>「現在地周辺」</strong>を押すだけで、半径1.5km以内のオフィス・事業者・医療施設を自動リストアップ。<br>
+          ※行政施設や一般飲食店、競合店は<strong>自動で除外</strong>されるため、営業対象のみを効率よく狙えます。
+        </div>
+      </div>
+
+      <!-- Step 2: 地図連携と直結ナビ -->
+      <div class="onboard-step" data-step="1">
+        <span class="onboard-badge">移動のムダ足をゼロに</span>
+        <div class="onboard-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+            <line x1="8" y1="2" x2="8" y2="18"></line>
+            <line x1="16" y1="6" x2="16" y2="22"></line>
+          </svg>
+        </div>
+        <div class="onboard-title">マップ＆ナビ直結でスムーズ訪問</div>
+        <div class="onboard-desc">
+          「マップ」タブで営業先の位置関係を一目で把握。各カードの<strong>「ナビ」</strong>を押せば現在地からの経路案内が即座に起動します。<strong>「電話/HP」</strong>から下調べもワンタップです。
+        </div>
+      </div>
+
+      <!-- Step 3: 店舗ごとのリスト独立管理 -->
+      <div class="onboard-step" data-step="2">
+        <span class="onboard-badge">複数拠点・複数店舗対応</span>
+        <div class="onboard-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M3 21h18M3 7v14M21 7v14M6 7V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v3M9 11h6M9 15h6"></path>
+          </svg>
+        </div>
+        <div class="onboard-title">担当店舗ごとの完全独立リスト</div>
+        <div class="onboard-desc">
+          ヘッダーの「担当店」切り替えにより、店舗ごとに営業先ストックを完全に分けて管理可能。<br>
+          「店舗管理」から新しい店舗も自由に追加でき、店舗間のデータ混同を防ぎます。
+        </div>
+      </div>
+
+      <!-- Step 4: 進捗管理とCSVエクスポート -->
+      <div class="onboard-step" data-step="3">
+        <span class="onboard-badge">成果の可視化 & 共有</span>
+        <div class="onboard-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <div class="onboard-title">状況をメモしてCSVダウンロード</div>
+        <div class="onboard-desc">
+          「未接触 / アプローチ中 / アポ獲得 / 成約」のステータス管理とメモ機能を完備。<br>
+          蓄積したリストはヘッダーの<strong>「CSV出力」</strong>からいつでもExcel互換ファイルとして即時ダウンロードできます。
+        </div>
+      </div>
+
+      <!-- ステップインジケーター（ドット） -->
+      <div class="onboard-dots" id="onboardDots">
+        <div class="onboard-dot active"></div>
+        <div class="onboard-dot"></div>
+        <div class="onboard-dot"></div>
+        <div class="onboard-dot"></div>
+      </div>
+
+      <!-- フッター操作ボタン -->
+      <div class="onboard-footer-nav">
+        <button class="btn-onboard-sub" id="onboardPrevBtn">スキップ</button>
+        <button class="btn-onboard-main" id="onboardNextBtn">次へ</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const API_BASE = 'https://api.openpoiapi.com';
     let map, markersLayer, searchPinLayer;
@@ -844,7 +1050,7 @@
       setupStoreManagement();
       setupEvents();
       setupModal();
-      setupTour();
+      setupOnboarding();
       renderSavedList();
       updateBadge();
     });
@@ -1092,57 +1298,76 @@
       });
     }
 
-    function setupTour() {
-      const driver = window.driver.js.driver;
-      const driverObj = driver({
-        showProgress: true,
-        animate: true,
-        allowClose: true,
-        nextBtnText: '次へ',
-        prevBtnText: '前へ',
-        doneBtnText: '完了',
-        steps: [
-          {
-            element: '#tourStoreSelector',
-            popover: {
-              title: '店舗（リスト）の切り替え',
-              description: '担当店舗ごとに営業先リストを独立して保存できます。「店舗管理」から新しい店舗を作成・管理できます。',
-              side: 'bottom',
-              align: 'start'
-            }
-          },
-          {
-            element: '#tourSearchPanel',
-            popover: {
-              title: '周辺法人の検索',
-              description: '駅名や地名を入力して検索するか、「現在地周辺」をタップすると周囲の法人が一覧化されます。',
-              side: 'bottom',
-              align: 'center'
-            }
-          },
-          {
-            element: '#tourBottomNav',
-            popover: {
-              title: '画面の切り替え',
-              description: '「見つける（検索結果）」、「マップ（地図確認）」、「営業先（保存済みリスト）」をワンタップで切り替え可能です。',
-              side: 'top',
-              align: 'center'
-            }
-          },
-          {
-            element: '#exportCsvBtn',
-            popover: {
-              title: 'CSV出力',
-              description: '選択中の店舗に登録されている営業先リストをCSV形式でダウンロードできます。',
-              side: 'bottom',
-              align: 'end'
-            }
-          }
-        ]
+    /* オンボーディングモーダル制御ロジック */
+    function setupOnboarding() {
+      const modal = document.getElementById('onboardingModal');
+      const startBtn = document.getElementById('startOnboardingBtn');
+      const closeBtn = document.getElementById('closeOnboardingBtn');
+      const prevBtn = document.getElementById('onboardPrevBtn');
+      const nextBtn = document.getElementById('onboardNextBtn');
+      const steps = document.querySelectorAll('.onboard-step');
+      const dots = document.querySelectorAll('.onboard-dot');
+      const stepNumberText = document.getElementById('onboardStepNumber');
+
+      let currentStep = 0;
+      const totalSteps = steps.length;
+
+      function updateStepView() {
+        steps.forEach((step, idx) => {
+          step.classList.toggle('active', idx === currentStep);
+        });
+        dots.forEach((dot, idx) => {
+          dot.classList.toggle('active', idx === currentStep);
+        });
+
+        stepNumberText.textContent = `Step ${currentStep + 1} / ${totalSteps}`;
+
+        if (currentStep === 0) {
+          prevBtn.textContent = 'スキップ';
+        } else {
+          prevBtn.textContent = '前へ';
+        }
+
+        if (currentStep === totalSteps - 1) {
+          nextBtn.textContent = '今すぐ営業を始める';
+        } else {
+          nextBtn.textContent = '次へ';
+        }
+      }
+
+      function openModal() {
+        currentStep = 0;
+        updateStepView();
+        modal.classList.add('open');
+      }
+
+      function closeModal() {
+        modal.classList.remove('open');
+      }
+
+      startBtn.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
       });
 
-      document.getElementById('startTourBtn').addEventListener('click', () => {
-        driverObj.drive();
+      nextBtn.addEventListener('click', () => {
+        if (currentStep < totalSteps - 1) {
+          currentStep++;
+          updateStepView();
+        } else {
+          closeModal();
+        }
+      });
+
+      prevBtn.addEventListener('click', () => {
+        if (currentStep > 0) {
+          currentStep--;
+          updateStepView();
+        } else {
+          closeModal();
+        }
       });
     }
 
